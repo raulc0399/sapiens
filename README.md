@@ -1,6 +1,10 @@
-# Sapiens Body Part Segmentation
+# Meta Sapiens Body Part Segmentation
 
 This script performs body part segmentation on images using Meta's Sapiens models. It processes images to identify and segment different body parts, generating both visual and data outputs.
+
+## Repository
+
+For more information and updates, visit the [Meta Sapiens GitHub repository](https://github.com/facebookresearch/sapiens).
 
 ## Requirements
 
