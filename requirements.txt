@@ -1,7 +1,4 @@
-gradio
 numpy
 torch
 torchvision
-matplotlib
 pillow
-opencv-python
