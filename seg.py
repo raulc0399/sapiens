@@ -29,7 +29,7 @@ def run_model(model, input_tensor, height, width):
     _, preds = torch.max(output, 1)
     return preds
 
-def process_image(image_path: str, model_name: str, output_dir: str):
+def process_image(image_path: str, model: str, output_dir: str):
     # Load and transform image
     image = Image.open(image_path).convert("RGB")
     transform_fn = transforms.Compose([
@@ -39,7 +39,6 @@ def process_image(image_path: str, model_name: str, output_dir: str):
     ])
     
     # Process image
-    model = load_model(model_name)
     input_tensor = transform_fn(image).unsqueeze(0).to("cuda")
     preds = run_model(model, input_tensor, image.height, image.width)
     mask = preds.squeeze(0).cpu().numpy()
@@ -91,13 +90,16 @@ def main():
     # Create output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
 
+    # Load model
+    model = load_model(args.model)
+
     # Process all images in the input directory
     for filename in os.listdir(args.input_dir):
         if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
             image_path = os.path.join(args.input_dir, filename)
             print(f"Processing {filename}...")
             try:
-                vis_path, mask_path = process_image(image_path, args.model, args.output_dir)
+                vis_path, mask_path = process_image(image_path, model, args.output_dir)
                 print(f"Saved results to {vis_path} and {mask_path}")
             except Exception as e:
                 print(f"Error processing {filename}: {str(e)}")
