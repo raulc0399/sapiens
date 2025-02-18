@@ -19,9 +19,43 @@ CHECKPOINTS = {
 
 def load_model(checkpoint_name: str):
     checkpoint_path = os.path.join(CHECKPOINTS_DIR, CHECKPOINTS[checkpoint_name])
+    print(f"\nModel Information:")
+    print(f"Checkpoint name: {checkpoint_name}")
+    print(f"Checkpoint path: {checkpoint_path}")
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    
+    # Print initial CUDA memory state
+    if torch.cuda.is_available():
+        print(f"\nCUDA device: {torch.cuda.get_device_name(0)}")
+        print(f"Initial CUDA memory:")
+        print(f"  Allocated: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+        print(f"  Reserved/Cached: {torch.cuda.memory_reserved(0) / 1024**2:.2f} MB")
+        print(f"  Max allocated: {torch.cuda.max_memory_allocated(0) / 1024**2:.2f} MB")
+    
+    # Load model and print memory after loading
+    print("\nLoading model...")
     model = torch.jit.load(checkpoint_path)
+    print(f"Model type: {type(model)}")
+    
+    # Move to CUDA and print memory again
+    print("\nMoving model to CUDA...")
     model.eval()
     model.to("cuda")
+    
+    if torch.cuda.is_available():
+        print(f"\nCUDA memory after moving to GPU:")
+        print(f"  Allocated: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+        print(f"  Reserved/Cached: {torch.cuda.memory_reserved(0) / 1024**2:.2f} MB")
+        print(f"  Max allocated: {torch.cuda.max_memory_allocated(0) / 1024**2:.2f} MB")
+    
+    # Get model parameters and structure
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"\nModel Parameters: {total_params:,}")
+    
+    # Print model structure
+    print("\nModel Structure:")
+    print(model.graph)
+    
     return model
 
 @torch.inference_mode()
