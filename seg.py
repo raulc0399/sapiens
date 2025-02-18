@@ -12,6 +12,7 @@ CHECKPOINTS = {
     "0.3b": "sapiens_0.3b_goliath_best_goliath_mIoU_7673_epoch_194_torchscript.pt2",
     "0.6b": "sapiens_0.6b_goliath_best_goliath_mIoU_7777_epoch_178_torchscript.pt2",
     "1b": "sapiens_1b_goliath_best_goliath_mIoU_7994_epoch_151_torchscript.pt2",
+    "2b": "sapiens_2b_goliath_best_goliath_mIoU_8131_epoch_200_torchscript.pt2",
 }
 
 def load_model(checkpoint_name: str):
@@ -79,7 +80,7 @@ def main():
     parser = argparse.ArgumentParser(description='Process images for body-part segmentation')
     parser.add_argument('input_dir', help='Directory containing input images')
     parser.add_argument('--output_dir', default='output', help='Directory to save results')
-    parser.add_argument('--model', default='1b', choices=['0.3b', '0.6b', '1b'], help='Model size to use')
+    parser.add_argument('--model', default='1b', choices=['0.3b', '0.6b', '1b', '2b'], help='Model size to use')
     args = parser.parse_args()
 
     # Configure CUDA if available
