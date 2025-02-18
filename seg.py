@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
+import matplotlib.pyplot as plt
 from classes_and_palettes import GOLIATH_PALETTE, GOLIATH_CLASSES
 
 # run using: python seg.py /path/to/input/images --output_dir /path/to/output --model 1b    
@@ -89,7 +90,39 @@ def process_image(image_path: str, model: str, output_dir: str):
     blended_image.save(vis_path)
     np.save(mask_path, mask)
     
-    return vis_path, mask_path
+    # Create visualization of the mask
+    mask_viz_path = os.path.join(output_dir, f"{base_name}_mask_viz.png")
+    visualize_mask(mask, mask_viz_path)
+    
+    return vis_path, mask_path, mask_viz_path
+
+def visualize_mask(mask, save_path):
+    """Visualize the segmentation mask with class labels."""
+    plt.figure(figsize=(15, 10))
+    
+    # Create main image
+    plt.subplot(1, 2, 1)
+    im = plt.imshow(mask)
+    plt.title('Segmentation Mask')
+    
+    # Create custom colorbar with class labels
+    ax2 = plt.subplot(1, 2, 2)
+    unique_classes = np.unique(mask)
+    colors = [im.cmap(im.norm(value)) for value in unique_classes]
+    patches = [plt.Rectangle((0, 0), 1, 1, fc=color) for color in colors]
+    
+    # Get class names for the legend
+    class_names = [GOLIATH_CLASSES[idx] if idx < len(GOLIATH_CLASSES) else f"Unknown ({idx})" 
+                  for idx in unique_classes]
+    
+    # Create legend
+    ax2.legend(patches, class_names, loc='center', frameon=False)
+    ax2.axis('off')
+    plt.title('Class Labels')
+    
+    plt.tight_layout()
+    plt.savefig(save_path, bbox_inches='tight', dpi=300)
+    plt.close()
 
 def visualize_pred_with_overlay(img, sem_seg, alpha=0.5):
         img_np = np.array(img.convert("RGB"))
@@ -135,8 +168,11 @@ def main():
             image_path = os.path.join(args.input_dir, filename)
             print(f"Processing {filename}...")
             try:
-                vis_path, mask_path = process_image(image_path, model, args.output_dir)
-                print(f"Saved results to {vis_path} and {mask_path}")
+                vis_path, mask_path, mask_viz_path = process_image(image_path, model, args.output_dir)
+                print(f"Saved results to:")
+                print(f"  - Overlay: {vis_path}")
+                print(f"  - Raw mask: {mask_path}")
+                print(f"  - Mask visualization: {mask_viz_path}")
             except Exception as e:
                 print(f"Error processing {filename}: {str(e)}")
 
