@@ -9,7 +9,7 @@ from classes_and_palettes import GOLIATH_PALETTE, GOLIATH_CLASSES
 
 # run using: python seg.py /path/to/input/images --output_dir /path/to/output --model 1b    
 
-CHECKPOINTS_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'checkpoints')
+CHECKPOINTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'models', 'sapiens')
 CHECKPOINTS = {
     "0.3b": "sapiens_0.3b_goliath_best_goliath_mIoU_7673_epoch_194_torchscript.pt2",
     "0.6b": "sapiens_0.6b_goliath_best_goliath_mIoU_7777_epoch_178_torchscript.pt2",
