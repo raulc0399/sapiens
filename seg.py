@@ -8,7 +8,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from classes_and_palettes import GOLIATH_PALETTE, GOLIATH_CLASSES
 
-# run using: python seg.py /path/to/input/images --output_dir /path/to/output --model 1b    
+# run using:
+# python seg.py /path/to/input/images --output_dir /path/to/output --model 1b
 
 CHECKPOINTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'models', 'sapiens')
 CHECKPOINTS = {
