@@ -3,3 +3,4 @@ torch
 torchvision
 pillow
 matplotlib
+opencv-python
