@@ -4,3 +4,4 @@ torchvision
 pillow
 matplotlib
 opencv-python
+openmim
