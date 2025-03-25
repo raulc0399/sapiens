@@ -24,17 +24,36 @@ from detector_utils import (
         )
 
 class Config:
+    HAND_KEYPOINTS = {
+        "right": [
+            "right_thumb4", "right_thumb3", "right_thumb2", "right_thumb_third_joint",
+            "right_forefinger4", "right_forefinger3", "right_forefinger2", "right_forefinger_third_joint",
+            "right_middle_finger4", "right_middle_finger3", "right_middle_finger2", "right_middle_finger_third_joint",
+            "right_ring_finger4", "right_ring_finger3", "right_ring_finger2", "right_ring_finger_third_joint",
+            "right_pinky_finger4", "right_pinky_finger3", "right_pinky_finger2", "right_pinky_finger_third_joint",
+            "right_wrist"
+        ],
+        "left": [
+            "left_thumb4", "left_thumb3", "left_thumb2", "left_thumb_third_joint",
+            "left_forefinger4", "left_forefinger3", "left_forefinger2", "left_forefinger_third_joint",
+            "left_middle_finger4", "left_middle_finger3", "left_middle_finger2", "left_middle_finger_third_joint",
+            "left_ring_finger4", "left_ring_finger3", "left_ring_finger2", "left_ring_finger_third_joint",
+            "left_pinky_finger4", "left_pinky_finger3", "left_pinky_finger2", "left_pinky_finger_third_joint",
+            "left_wrist"
+        ]
+    }
+
     MODELS_DIR = os.path.join(os.path.dirname(__file__), '../models/sapiens')
     CHECKPOINTS = {
         "0.3b": "sapiens_0.3b_goliath_best_goliath_AP_573_torchscript.pt2",
         "0.6b": "sapiens_0.6b_goliath_best_goliath_AP_609_torchscript.pt2",
         "1b": "sapiens_1b_goliath_best_goliath_AP_639_torchscript.pt2",
     }
+
     DETECTION_CHECKPOINT = os.path.join(MODELS_DIR, 'rtmdet_m_8xb32-100e_coco-obj365-person-235e8209.pth')
     DETECTION_CONFIG = os.path.join(MODELS_DIR, 'rtmdet_m_640-8xb32_coco-person_no_nms.py')
 
 class ModelManager:
-    @staticmethod
     def load_model(checkpoint_name: str):
         if checkpoint_name is None:
             return None
@@ -99,14 +118,19 @@ class ImageProcessor:
             heatmaps = ModelManager.run_model(pose_model, input_tensor)
             keypoints = self.heatmaps_to_keypoints(heatmaps[0].cpu().numpy(), bbox)
             all_keypoints.append(keypoints)  # Collect keypoints
+
+            left_hand_image = self.draw_keypoints(image.copy(), keypoints, bbox, kpt_threshold, hand_side='left')
+            right_hand_image = self.draw_keypoints(image.copy(), keypoints, bbox, kpt_threshold, hand_side='right')
+
             result_image = self.draw_keypoints(result_image, keypoints, bbox, kpt_threshold)
         
-        return result_image, all_keypoints
+        return result_image, left_hand_image, right_hand_image, all_keypoints
 
     def process_image(self, image: Image.Image, model_name: str, kpt_threshold: str):
         bboxes = self.detect_persons(image)
-        result_image, keypoints = self.estimate_pose(image, bboxes, model_name, float(kpt_threshold))
-        return result_image, keypoints
+        result_image, left_hand_image, right_hand_image, keypoints = self.estimate_pose(image, bboxes, model_name, float(kpt_threshold))
+                
+        return result_image, left_hand_image, right_hand_image, keypoints
 
     def crop_image(self, image, bbox):
         if len(bbox) == 4:
@@ -127,19 +151,22 @@ class ImageProcessor:
         bbox_width = x2 - x1
         bbox_height = y2 - y1
         
-        for i, name in enumerate(GOLIATH_KEYPOINTS):
-            if i < num_joints:
-                heatmap = heatmaps[i]
-                y, x = np.unravel_index(np.argmax(heatmap), heatmap.shape)
-                conf = heatmap[y, x]
-                # Convert coordinates to image frame
-                x_image = x * bbox_width / 192 + x1
-                y_image = y * bbox_height / 256 + y1
-                keypoints[name] = (float(x_image), float(y_image), float(conf))
+        for hand_side, keypoint_names in Config.HAND_KEYPOINTS.items():
+            for name in keypoint_names:
+                if name in GOLIATH_KEYPOINTS:
+                    index = GOLIATH_KEYPOINTS.index(name)
+                    if index < num_joints:
+                        heatmap = heatmaps[index]
+                        y, x = np.unravel_index(np.argmax(heatmap), heatmap.shape)
+                        conf = heatmap[y, x]
+                        # Convert coordinates to image frame
+                        x_image = x * bbox_width / 192 + x1
+                        y_image = y * bbox_height / 256 + y1
+                        keypoints[name] = (float(x_image), float(y_image), float(conf))
         return keypoints
 
     @staticmethod
-    def draw_keypoints(image, keypoints, bbox, kpt_threshold):
+    def draw_keypoints(image, keypoints, bbox, kpt_threshold, hand_side=None):
         image = np.array(image)
 
         # Handle both 4 and 5-element bounding boxes
@@ -162,22 +189,13 @@ class ImageProcessor:
         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), bbox_thickness)
         
         # Draw keypoints for arms and hands
-        hand_keypoints = {
-            "right_thumb4", "right_thumb3", "right_thumb2", "right_thumb_third_joint",
-            "right_forefinger4", "right_forefinger3", "right_forefinger2", "right_forefinger_third_joint",
-            "right_middle_finger4", "right_middle_finger3", "right_middle_finger2", "right_middle_finger_third_joint",
-            "right_ring_finger4", "right_ring_finger3", "right_ring_finger2", "right_ring_finger_third_joint",
-            "right_pinky_finger4", "right_pinky_finger3", "right_pinky_finger2", "right_pinky_finger_third_joint",
-            "right_wrist",
-            "left_thumb4", "left_thumb3", "left_thumb2", "left_thumb_third_joint",
-            "left_forefinger4", "left_forefinger3", "left_forefinger2", "left_forefinger_third_joint",
-            "left_middle_finger4", "left_middle_finger3", "left_middle_finger2", "left_middle_finger_third_joint",
-            "left_ring_finger4", "left_ring_finger3", "left_ring_finger2", "left_ring_finger_third_joint",
-            "left_pinky_finger4", "left_pinky_finger3", "left_pinky_finger2", "left_pinky_finger_third_joint",
-            "left_wrist"
-        }
+        if hand_side:
+            keypoint_names = Config.HAND_KEYPOINTS[hand_side]
+        else:
+            keypoint_names = Config.HAND_KEYPOINTS["right"] + Config.HAND_KEYPOINTS["left"]
+
         for i, (name, (x, y, conf)) in enumerate(keypoints.items()):
-            if name in hand_keypoints and conf > kpt_threshold and i < len(GOLIATH_KPTS_COLORS):
+            if name in keypoint_names and conf > kpt_threshold and i < len(GOLIATH_KPTS_COLORS):
                 x_coord = int(x)
                 y_coord = int(y)
                 color = GOLIATH_KPTS_COLORS[i]
@@ -188,7 +206,7 @@ class ImageProcessor:
             pt1_name, pt2_name = link_info['link']
             color = link_info['color']
             
-            if pt1_name in hand_keypoints and pt2_name in hand_keypoints:
+            if pt1_name in keypoint_names and pt2_name in keypoint_names:
                 pt1 = keypoints[pt1_name]
                 pt2 = keypoints[pt2_name]
                 if pt1[2] > kpt_threshold and pt2[2] > kpt_threshold:
@@ -230,7 +248,7 @@ def main():
                 image = Image.open(image_path).convert("RGB")
                 
                 # Process image
-                result_image, keypoints = image_processor.process_image(image, args.model, args.kpt_threshold)
+                result_image, left_hand_image, right_hand_image, keypoints = image_processor.process_image(image, args.model, args.kpt_threshold)
                 
                 # Create output filenames
                 base_name = os.path.splitext(os.path.basename(image_path))[0]
@@ -239,12 +257,35 @@ def main():
                 
                 # Save results
                 result_image.save(result_path)
+                
+                # Save left and right hand images
+                left_hand_path = os.path.join(args.output_dir, f"{base_name}_left_hand.png")
+                right_hand_path = os.path.join(args.output_dir, f"{base_name}_right_hand.png")
+                left_hand_image.save(left_hand_path)
+                right_hand_image.save(right_hand_path)
+
+                # Prepare hand keypoints data for JSON
+                hand_keypoints_data = []
+                for hand_side, keypoint_names in Config.HAND_KEYPOINTS.items():
+                    hand_data = {
+                        "type": hand_side,
+                        "keypoints": [
+                            {"x": x, "y": y}
+                            for keypoint in keypoints
+                            for name, (x, y, conf) in keypoint.items()
+                            if name in keypoint_names and conf > float(args.kpt_threshold)
+                        ]
+                    }
+                    hand_keypoints_data.append(hand_data)
+
                 with open(json_path, 'w') as f:
-                    json.dump(keypoints, f, indent=2)
+                    json.dump(hand_keypoints_data, f, indent=2)
                 
                 print(f"Saved results to:")
                 print(f"  - Visualization: {result_path}")
                 print(f"  - Keypoints: {json_path}")
+                print(f"  - Left Hand: {left_hand_path}")
+                print(f"  - Right Hand: {right_hand_path}")
             except Exception as e:
                 print(f"Error processing {filename}: {str(e)}")
 
