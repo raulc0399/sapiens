@@ -161,9 +161,13 @@ class ImageProcessor:
 
         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), bbox_thickness)
         
-        # Draw keypoints
+        # Draw keypoints for arms and hands
+        arm_hand_keypoints = {
+            "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+            "left_wrist", "right_wrist"
+        }
         for i, (name, (x, y, conf)) in enumerate(keypoints.items()):
-            if conf > kpt_threshold and i < len(GOLIATH_KPTS_COLORS):
+            if name in arm_hand_keypoints and conf > kpt_threshold and i < len(GOLIATH_KPTS_COLORS):
                 x_coord = int(x)
                 y_coord = int(y)
                 color = GOLIATH_KPTS_COLORS[i]
